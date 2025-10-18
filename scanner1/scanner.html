@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowGuard Scanner - Cyber Fraud Detection</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00FF66;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Matrix Background Animation */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            opacity: 0.1;
+        }
+
+        .matrix-column {
+            position: absolute;
+            top: -100px;
+            font-size: 14px;
+            line-height: 1.2;
+            animation: matrix-fall linear infinite;
+        }
+
+        @keyframes matrix-fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+
+        /* Scan Lines Animation */
+        .scan-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00FF66, transparent);
+            animation: scan-move 3s linear infinite;
+        }
+
+        @keyframes scan-move {
+            0% { top: -2px; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 100vh; opacity: 0; }
+        }
+
+        /* Main Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .panel {
+            background: rgba(0, 255, 102, 0.05);
+            border: 1px solid #00FF66;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            text-shadow: 0 0 10px #00FF66;
+        }
+
+        /* Input Panel */
+        .input-textarea {
+            width: 100%;
+            height: 80px;
+            background: #000;
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 0.75rem;
+            resize: vertical;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.2);
+        }
+
+        .input-textarea:focus {
+            outline: none;
+            box-shadow: inset 0 0 15px rgba(0, 255, 102, 0.4);
+        }
+
+        .fraud-types {
+            margin: 1rem 0;
+        }
+
+        .fraud-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .fraud-dropdown {
+            background: #000;
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            padding: 0.5rem;
+            font-family: inherit;
+            border-radius: 4px;
+            flex: 1;
+        }
+
+        .custom-fraud-input {
+            background: #000;
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            padding: 0.5rem;
+            font-family: inherit;
+            border-radius: 4px;
+            flex: 1;
+        }
+
+        .selected-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: rgba(0, 255, 102, 0.2);
+            border: 1px solid #00FF66;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 12px;
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: #00FF66;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            background: rgba(0, 255, 102, 0.1);
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            padding: 0.75rem 1.5rem;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(0, 255, 102, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: rgba(0, 255, 102, 0.2);
+        }
+
+        /* Scanning Animation */
+        .scanning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+        }
+
+        .scanning-bar {
+            width: 80%;
+            height: 4px;
+            background: rgba(0, 255, 102, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .scanning-progress {
+            height: 100%;
+            background: #00FF66;
+            width: 0%;
+            animation: scan-progress 3s ease-in-out;
+            box-shadow: 0 0 10px #00FF66;
+        }
+
+        @keyframes scan-progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .scanning-status {
+            font-size: 14px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            position: relative;
+        }
+
+        .risk-circle {
+            width: 150px;
+            height: 150px;
+            border: 3px solid #00FF66;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 2rem auto;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.5);
+        }
+
+        .risk-score {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .risk-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .risk-reasons {
+            margin: 1rem 0;
+        }
+
+        .reason-item {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: rgba(0, 255, 102, 0.1);
+            border-left: 3px solid #00FF66;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .metadata-toggle {
+            margin: 1rem 0;
+        }
+
+        .metadata-panel {
+            background: rgba(0, 255, 102, 0.05);
+            border: 1px solid rgba(0, 255, 102, 0.3);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Console Log */
+        .console-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 1px solid #00FF66;
+            padding: 1rem;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .console-log {
+            margin: 0.25rem 0;
+            opacity: 0;
+            animation: fade-in 0.5s ease-in forwards;
+        }
+
+        @keyframes fade-in {
+            to { opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .console-panel {
+                height: 100px;
+                font-size: 10px;
+            }
+        }
+
+        /* Admin Panel Styles */
+        .admin-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .admin-container {
+            background: rgba(0, 255, 102, 0.05);
+            border: 2px solid #00FF66;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.4);
+            position: relative;
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .admin-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 15px #00FF66;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .admin-tab {
+            flex: 1;
+            background: rgba(0, 255, 102, 0.1);
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            padding: 0.75rem;
+            font-family: inherit;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .admin-tab.active {
+            background: rgba(0, 255, 102, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+        }
+
+        .admin-tab:hover {
+            background: rgba(0, 255, 102, 0.15);
+        }
+
+        .auth-form {
+            animation: fade-in 0.3s ease-in;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .auth-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            padding: 0.75rem;
+            font-family: inherit;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .auth-input:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+            border-color: #00FF66;
+        }
+
+        .auth-input::placeholder {
+            color: rgba(0, 255, 102, 0.5);
+        }
+
+        .checkbox-label {
+            display: flex !important;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem !important;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .auth-btn {
+            width: 100%;
+            background: rgba(0, 255, 102, 0.2);
+            border: 2px solid #00FF66;
+            color: #00FF66;
+            padding: 1rem;
+            font-family: inherit;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+
+        .auth-btn:hover:not(:disabled) {
+            background: rgba(0, 255, 102, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            padding: 1rem;
+            border-top: 1px solid rgba(0, 255, 102, 0.2);
+            margin-top: 1rem;
+        }
+
+        .admin-status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .admin-status.success {
+            background: rgba(0, 255, 102, 0.2);
+            border: 1px solid #00FF66;
+            color: #00FF66;
+            display: block;
+        }
+
+        .admin-status.error {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            display: block;
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 68, 68, 0.3);
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+        }
+
+        /* Color Classes */
+        .clean { color: #00FF66; border-color: #00FF66; }
+        .suspicious { color: #FFD700; border-color: #FFD700; }
+        .malicious { color: #FF4444; border-color: #FF4444; }
+    </style>
+</head>
+<body>
+    <!-- Matrix Background -->
+    <div class="matrix-bg" id="matrixBg"></div>
+    
+    <!-- Scan Lines -->
+    <div class="scan-lines">
+        <div class="scan-line" style="animation-delay: 0s;"></div>
+        <div class="scan-line" style="animation-delay: 1s;"></div>
+        <div class="scan-line" style="animation-delay: 2s;"></div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h2>🔐 SHADOWGUARD ADMIN ACCESS 🔐</h2>
+                <div class="admin-tabs">
+                    <button id="signinTab" class="admin-tab active">SIGN IN</button>
+                    <button id="signupTab" class="admin-tab">SIGN UP</button>
+                </div>
+            </div>
+            
+            <!-- Sign In Form -->
+            <div id="signinForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signinEmail">Administrator Email:</label>
+                    <input type="email" id="signinEmail" class="auth-input" placeholder="admin@shadowguard.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signinPassword">Security Passphrase:</label>
+                    <input type="password" id="signinPassword" class="auth-input" placeholder="Enter secure passphrase" required>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe"> Remember this device
+                    </label>
+                </div>
+                <button id="signinBtn" class="auth-btn">ACCESS SYSTEM</button>
+                <div class="auth-footer">
+                    <p>Demo credentials: admin@demo.com / demo123</p>
+                </div>
+            </div>
+            
+            <!-- Sign Up Form -->
+            <div id="signupForm" class="auth-form" style="display: none;">
+                <div class="form-group">
+                    <label for="signupName">Administrator Name:</label>
+                    <input type="text" id="signupName" class="auth-input" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email Address:</label>
+                    <input type="email" id="signupEmail" class="auth-input" placeholder="admin@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Create Passphrase:</label>
+                    <input type="password" id="signupPassword" class="auth-input" placeholder="Minimum 8 characters" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Passphrase:</label>
+                    <input type="password" id="confirmPassword" class="auth-input" placeholder="Re-enter passphrase" required>
+                </div>
+                <div class="form-group">
+                    <label for="accessCode">Admin Access Code:</label>
+                    <input type="text" id="accessCode" class="auth-input" placeholder="Contact IT for access code" required>
+                </div>
+                <button id="signupBtn" class="auth-btn">CREATE ADMIN ACCOUNT</button>
+                <div class="auth-footer">
+                    <p>Demo access code: SHADOW2024</p>
+                </div>
+            </div>
+            
+            <div class="admin-status" id="adminStatus"></div>
+        </div>
+    </div>
+
+    <!-- Logout Button -->
+    <button id="logoutBtn" class="logout-btn" style="display: none;">🚪 LOGOUT</button>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <!-- Input Panel -->
+        <div class="panel">
+            <h2 class="panel-title">⚡ INPUT ANALYZER ⚡</h2>
+            
+            <textarea 
+                id="inputText" 
+                class="input-textarea" 
+                placeholder="Paste suspicious URLs, emails, phone numbers, or message text here for analysis..."
+                aria-label="Input text for fraud analysis"
+            ></textarea>
+            
+            <div class="fraud-types">
+                <label for="fraudDropdown">Fraud Type Detection:</label>
+                <div class="fraud-selector">
+                    <select id="fraudDropdown" class="fraud-dropdown">
+                        <option value="">Select fraud type...</option>
+                        <option value="Phishing Email">Phishing Email</option>
+                        <option value="Smishing (SMS phishing)">Smishing (SMS phishing)</option>
+                        <option value="Vishing (phone phishing)">Vishing (phone phishing)</option>
+                        <option value="Fake Invoice">Fake Invoice</option>
+                        <option value="Scam URL">Scam URL</option>
+                        <option value="Malware Link">Malware Link</option>
+                        <option value="Fraudulent Phone Number">Fraudulent Phone Number</option>
+                        <option value="Social Engineering">Social Engineering</option>
+                        <option value="Identity Theft">Identity Theft</option>
+                    </select>
+                    <input 
+                        type="text" 
+                        id="customFraud" 
+                        class="custom-fraud-input" 
+                        placeholder="Custom fraud type..."
+                        aria-label="Custom fraud type"
+                    >
+                </div>
+                
+                <div id="selectedTags" class="selected-tags" aria-live="polite"></div>
+            </div>
+            
+            <div class="controls">
+                <button id="scanBtn" class="btn btn-primary" disabled>Execute Scan</button>
+                <button id="clearBtn" class="btn">Clear All</button>
+            </div>
+            
+            <!-- Scanning Overlay -->
+            <div id="scanningOverlay" class="scanning-overlay">
+                <div class="scanning-bar">
+                    <div class="scanning-progress"></div>
+                </div>
+                <div id="scanningStatus" class="scanning-status" aria-live="assertive"></div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="panel results-panel">
+            <h2 class="panel-title">🛡️ THREAT ANALYSIS 🛡️</h2>
+            
+            <div id="resultsContent" style="display: none;">
+                <div id="riskCircle" class="risk-circle">
+                    <div id="riskScore" class="risk-score">0</div>
+                    <div id="riskLabel" class="risk-label">Analyzing...</div>
+                </div>
+                
+                <div class="risk-reasons">
+                    <h3>Risk Factors Detected:</h3>
+                    <div id="riskReasons" aria-live="polite"></div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="reportBtn" class="btn">Report</button>
+                    <button id="blockBtn" class="btn">Block</button>
+                    <button id="whitelistBtn" class="btn">Whitelist</button>
+                    <button id="exportBtn" class="btn">Export</button>
+                </div>
+                
+                <div class="metadata-toggle">
+                    <button id="metadataToggle" class="btn">Show Metadata</button>
+                </div>
+                
+                <div id="metadataPanel" class="metadata-panel">
+                    <h4>Scan Metadata:</h4>
+                    <div id="metadataContent"></div>
+                </div>
+            </div>
+            
+            <div id="noResults" style="text-align: center; margin-top: 3rem;">
+                <p>🔍 Ready to analyze threats</p>
+                <p style="font-size: 0.8rem; opacity: 0.7;">Enter suspicious content and execute scan</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Console Panel -->
+    <div class="console-panel">
+        <div style="border-bottom: 1px solid #00FF66; margin-bottom: 0.5rem; padding-bottom: 0.5rem;">
+            <strong>SHADOWGUARD CONSOLE LOG</strong>
+        </div>
+        <div id="consoleLog"></div>
+    </div>
+
+    <script>
+        // Global state
+        let selectedFraudTypes = [];
+        let scanResults = null;
+        let currentUser = null;
+        let isAuthenticated = false;
+
+        // DOM elements
+        const inputText = document.getElementById('inputText');
+        const fraudDropdown = document.getElementById('fraudDropdown');
+        const customFraud = document.getElementById('customFraud');
+        const selectedTags = document.getElementById('selectedTags');
+        const scanBtn = document.getElementById('scanBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const scanningOverlay = document.getElementById('scanningOverlay');
+        const scanningStatus = document.getElementById('scanningStatus');
+        const resultsContent = document.getElementById('resultsContent');
+        const noResults = document.getElementById('noResults');
+        const riskCircle = document.getElementById('riskCircle');
+        const riskScore = document.getElementById('riskScore');
+        const riskLabel = document.getElementById('riskLabel');
+        const riskReasons = document.getElementById('riskReasons');
+        const consoleLog = document.getElementById('consoleLog');
+
+        // Initialize matrix background
+        function initMatrixBackground() {
+            const matrixBg = document.getElementById('matrixBg');
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            
+            for (let i = 0; i < 50; i++) {
+                const column = document.createElement('div');
+                column.className = 'matrix-column';
+                column.style.left = Math.random() * 100 + '%';
+                column.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                column.style.animationDelay = Math.random() * 2 + 's';
+                
+                let text = '';
+                for (let j = 0; j < 20; j++) {
+                    text += chars[Math.floor(Math.random() * chars.length)] + '<br>';
+                }
+                column.innerHTML = text;
+                
+                matrixBg.appendChild(column);
+            }
+        }
+
+        // Console logging
+        function logToConsole(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'console-log';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        // Fraud type management
+        function addFraudType(type) {
+            if (type && !selectedFraudTypes.includes(type)) {
+                selectedFraudTypes.push(type);
+                updateTagsDisplay();
+                logToConsole(`Added fraud type: ${type}`);
+            }
+        }
+
+        function removeFraudType(type) {
+            selectedFraudTypes = selectedFraudTypes.filter(t => t !== type);
+            updateTagsDisplay();
+            logToConsole(`Removed fraud type: ${type}`);
+        }
+
+        function updateTagsDisplay() {
+            selectedTags.innerHTML = selectedFraudTypes.map(type => `
+                <div class="tag">
+                    ${type}
+                    <button class="tag-remove" onclick="removeFraudType('${type}')" aria-label="Remove ${type}">×</button>
+                </div>
+            `).join('');
+        }
+
+        // Detection algorithms
+        function analyzeContent(text, fraudTypes) {
+            const analysis = {
+                riskScore: 0,
+                reasons: [],
+                classification: 'clean',
+                metadata: {
+                    timestamp: new Date().toISOString(),
+                    textLength: text.length,
+                    fraudTypesSelected: fraudTypes.length,
+                    patterns: []
+                }
+            };
+
+            // URL analysis
+            const urlPattern = /https?:\/\/[^\s]+/gi;
+            const urls = text.match(urlPattern) || [];
+            
+            urls.forEach(url => {
+                const suspiciousUrlKeywords = ['login', 'verify', 'account', 'secure', 'update', 'confirm', 'suspended'];
+                const misspelledBrands = ['payp4l', 'g00gle', 'micr0soft', 'amaz0n', 'appl3'];
+                
+                suspiciousUrlKeywords.forEach(keyword => {
+                    if (url.toLowerCase().includes(keyword)) {
+                        analysis.riskScore += 15;
+                        analysis.reasons.push(`Suspicious URL keyword detected: "${keyword}"`);
+                        analysis.metadata.patterns.push(`URL_KEYWORD:${keyword}`);
+                    }
+                });
+                
+                misspelledBrands.forEach(brand => {
+                    if (url.toLowerCase().includes(brand)) {
+                        analysis.riskScore += 25;
+                        analysis.reasons.push(`Potential brand impersonation: "${brand}"`);
+                        analysis.metadata.patterns.push(`BRAND_IMPERSONATION:${brand}`);
+                    }
+                });
+            });
+
+            // Email/text content analysis
+            const suspiciousPhrases = [
+                'urgent action required', 'verify your account', 'click here immediately',
+                'suspended account', 'confirm your identity', 'update payment method',
+                'limited time offer', 'act now', 'congratulations you have won',
+                'claim your prize', 'tax refund', 'inheritance'
+            ];
+
+            suspiciousPhrases.forEach(phrase => {
+                if (text.toLowerCase().includes(phrase.toLowerCase())) {
+                    analysis.riskScore += 20;
+                    analysis.reasons.push(`Suspicious phrase detected: "${phrase}"`);
+                    analysis.metadata.patterns.push(`PHRASE:${phrase}`);
+                }
+            });
+
+            // Phone number analysis
+            const phonePattern = /(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/g;
+            const phones = text.match(phonePattern) || [];
+            
+            const scamPrefixes = ['855', '844', '833', '888', '877', '866'];
+            phones.forEach(phone => {
+                const digits = phone.replace(/\D/g, '');
+                const prefix = digits.substring(digits.length - 10, digits.length - 7);
+                
+                if (scamPrefixes.includes(prefix)) {
+                    analysis.riskScore += 10;
+                    analysis.reasons.push(`Phone number with suspicious prefix: ${prefix}`);
+                    analysis.metadata.patterns.push(`PHONE_PREFIX:${prefix}`);
+                }
+            });
+
+            // Fraud type specific analysis
+            fraudTypes.forEach(fraudType => {
+                switch (fraudType.toLowerCase()) {
+                    case 'phishing email':
+                        if (text.includes('@') && (text.includes('password') || text.includes('login'))) {
+                            analysis.riskScore += 15;
+                            analysis.reasons.push('Email contains phishing indicators');
+                        }
+                        break;
+                    case 'smishing (sms phishing)':
+                        if (text.length < 160 && urls.length > 0) {
+                            analysis.riskScore += 20;
+                            analysis.reasons.push('Short message with URL (SMS phishing pattern)');
+                        }
+                        break;
+                    case 'fake invoice':
+                        if (text.toLowerCase().includes('invoice') || text.toLowerCase().includes('payment due')) {
+                            analysis.riskScore += 25;
+                            analysis.reasons.push('Contains invoice-related content');
+                        }
+                        break;
+                }
+            });
+
+            // Grammar and spelling analysis
+            const grammarIssues = text.match(/\b(recieve|seperate|occured|definately|loose)\b/gi);
+            if (grammarIssues && grammarIssues.length > 0) {
+                analysis.riskScore += 10;
+                analysis.reasons.push('Poor grammar/spelling detected');
+                analysis.metadata.patterns.push('GRAMMAR_ISSUES');
+            }
+
+            // Urgency indicators
+            const urgencyWords = ['urgent', 'immediate', 'expires today', 'act now', 'limited time'];
+            urgencyWords.forEach(word => {
+                if (text.toLowerCase().includes(word.toLowerCase())) {
+                    analysis.riskScore += 8;
+                    analysis.reasons.push(`Urgency indicator: "${word}"`);
+                    analysis.metadata.patterns.push(`URGENCY:${word}`);
+                }
+            });
+
+            // Determine classification
+            if (analysis.riskScore < 30) {
+                analysis.classification = 'clean';
+            } else if (analysis.riskScore <= 70) {
+                analysis.classification = 'suspicious';
+            } else {
+                analysis.classification = 'malicious';
+            }
+
+            // Cap risk score at 100
+            analysis.riskScore = Math.min(analysis.riskScore, 100);
+
+            return analysis;
+        }
+
+        // Scanning process
+        async function executeScan() {
+            const text = inputText.value.trim();
+            if (!text) return;
+
+            logToConsole('Initiating fraud detection scan...');
+            
+            // Show scanning overlay
+            scanningOverlay.style.display = 'flex';
+            scanBtn.disabled = true;
+            
+            const scanSteps = [
+                'Parsing input data...',
+                'Validating format structure...',
+                'Checking against fraud patterns...',
+                'Querying threat intelligence databases...',
+                'Running heuristic analysis...',
+                'Generating risk assessment...'
+            ];
+
+            // Simulate scanning process
+            for (let i = 0; i < scanSteps.length; i++) {
+                scanningStatus.textContent = scanSteps[i];
+                logToConsole(scanSteps[i]);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Perform actual analysis
+            scanResults = analyzeContent(text, selectedFraudTypes);
+            
+            // Hide scanning overlay and show results
+            scanningOverlay.style.display = 'none';
+            displayResults(scanResults);
+            scanBtn.disabled = false;
+            
+            logToConsole(`Scan completed. Risk score: ${scanResults.riskScore}/100 (${scanResults.classification})`);
+        }
+
+        // Display results
+        function displayResults(results) {
+            noResults.style.display = 'none';
+            resultsContent.style.display = 'block';
+            
+            // Update risk circle
+            riskScore.textContent = results.riskScore;
+            riskLabel.textContent = results.classification.toUpperCase();
+            
+            // Apply color coding
+            riskCircle.className = `risk-circle ${results.classification}`;
+            
+            // Display reasons
+            if (results.reasons.length > 0) {
+                riskReasons.innerHTML = results.reasons.slice(0, 3).map(reason => 
+                    `<div class="reason-item">⚠️ ${reason}</div>`
+                ).join('');
+            } else {
+                riskReasons.innerHTML = '<div class="reason-item">✅ No significant risk factors detected</div>';
+            }
+            
+            // Update metadata
+            updateMetadata(results.metadata);
+        }
+
+        // Update metadata panel
+        function updateMetadata(metadata) {
+            const metadataContent = document.getElementById('metadataContent');
+            metadataContent.innerHTML = `
+                <p><strong>Scan Timestamp:</strong> ${metadata.timestamp}</p>
+                <p><strong>Text Length:</strong> ${metadata.textLength} characters</p>
+                <p><strong>Fraud Types Selected:</strong> ${metadata.fraudTypesSelected}</p>
+                <p><strong>Patterns Matched:</strong> ${metadata.patterns.length}</p>
+                <p><strong>Pattern Details:</strong> ${metadata.patterns.join(', ') || 'None'}</p>
+            `;
+        }
+
+        // Action button handlers
+        function handleReport() {
+            logToConsole('Threat report submitted to security database');
+            alert('Report submitted successfully! Thank you for helping improve our threat detection.');
+        }
+
+        function handleBlock() {
+            logToConsole('Content added to block list');
+            alert('Content has been added to your personal block list.');
+        }
+
+        function handleWhitelist() {
+            logToConsole('Content added to whitelist');
+            alert('Content has been added to your trusted whitelist.');
+        }
+
+        function handleExport() {
+            if (!scanResults) return;
+            
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                inputText: inputText.value,
+                fraudTypes: selectedFraudTypes,
+                results: scanResults
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `shadowguard-scan-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            logToConsole('Scan report exported successfully');
+        }
+
+        function toggleMetadata() {
+            const panel = document.getElementById('metadataPanel');
+            const toggle = document.getElementById('metadataToggle');
+            
+            if (panel.style.display === 'none' || !panel.style.display) {
+                panel.style.display = 'block';
+                toggle.textContent = 'Hide Metadata';
+            } else {
+                panel.style.display = 'none';
+                toggle.textContent = 'Show Metadata';
+            }
+        }
+
+        // Clear all inputs
+        function clearAll() {
+            inputText.value = '';
+            selectedFraudTypes = [];
+            updateTagsDisplay();
+            resultsContent.style.display = 'none';
+            noResults.style.display = 'block';
+            scanBtn.disabled = true;
+            logToConsole('All inputs cleared');
+        }
+
+        // Event listeners
+        inputText.addEventListener('input', () => {
+            scanBtn.disabled = !inputText.value.trim();
+        });
+
+        inputText.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !scanBtn.disabled) {
+                e.preventDefault();
+                executeScan();
+            }
+        });
+
+        fraudDropdown.addEventListener('change', (e) => {
+            if (e.target.value) {
+                addFraudType(e.target.value);
+                e.target.value = '';
+            }
+        });
+
+        customFraud.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                addFraudType(e.target.value.trim());
+                e.target.value = '';
+            }
+        });
+
+        scanBtn.addEventListener('click', executeScan);
+        clearBtn.addEventListener('click', clearAll);
+
+        // Action button event listeners
+        document.getElementById('reportBtn').addEventListener('click', handleReport);
+        document.getElementById('blockBtn').addEventListener('click', handleBlock);
+        document.getElementById('whitelistBtn').addEventListener('click', handleWhitelist);
+        document.getElementById('exportBtn').addEventListener('click', handleExport);
+        document.getElementById('metadataToggle').addEventListener('click', toggleMetadata);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                clearAll();
+            } else if (e.key === 'Enter' && e.shiftKey && customFraud === document.activeElement) {
+                e.preventDefault();
+                if (customFraud.value.trim()) {
+                    addFraudType(customFraud.value.trim());
+                    customFraud.value = '';
+                }
+            }
+        });
+
+        // Admin Authentication Functions
+        function showAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'grid';
+            document.getElementById('logoutBtn').style.display = 'block';
+        }
+
+        function switchTab(tab) {
+            const signinTab = document.getElementById('signinTab');
+            const signupTab = document.getElementById('signupTab');
+            const signinForm = document.getElementById('signinForm');
+            const signupForm = document.getElementById('signupForm');
+
+            if (tab === 'signin') {
+                signinTab.classList.add('active');
+                signupTab.classList.remove('active');
+                signinForm.style.display = 'block';
+                signupForm.style.display = 'none';
+            } else {
+                signupTab.classList.add('active');
+                signinTab.classList.remove('active');
+                signupForm.style.display = 'block';
+                signinForm.style.display = 'none';
+            }
+            clearAuthStatus();
+        }
+
+        function showAuthStatus(message, type) {
+            const status = document.getElementById('adminStatus');
+            status.textContent = message;
+            status.className = `admin-status ${type}`;
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        function clearAuthStatus() {
+            document.getElementById('adminStatus').style.display = 'none';
+        }
+
+        async function handleSignIn(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('signinEmail').value.trim();
+            const password = document.getElementById('signinPassword').value;
+            const remember = document.getElementById('rememberMe').checked;
+
+            if (!email || !password) {
+                showAuthStatus('Please fill in all required fields', 'error');
+                return;
+            }
+
+            // Simulate authentication process
+            document.getElementById('signinBtn').disabled = true;
+            document.getElementById('signinBtn').textContent = 'AUTHENTICATING...';
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Demo authentication (in real app, this would be server-side)
+            if (email === 'admin@demo.com' && password === 'demo123') {
+                currentUser = {
+                    email: email,
+                    name: 'Demo Administrator',
+                    role: 'admin',
+                    loginTime: new Date().toISOString()
+                };
+                
+                isAuthenticated = true;
+                
+                if (remember) {
+                    localStorage.setItem('shadowguard_session', JSON.stringify(currentUser));
+                }
+                
+                showAuthStatus('Authentication successful! Welcome back.', 'success');
+                logToConsole(`Admin login successful: ${email}`);
+                
+                setTimeout(() => {
+                    hideAdminPanel();
+                    logToConsole('ShadowGuard Scanner initialized successfully');
+                    logToConsole('System ready for threat detection');
+                }, 1500);
+                
+            } else {
+                showAuthStatus('Invalid credentials. Please try again.', 'error');
+                logToConsole(`Failed login attempt: ${email}`);
+            }
+
+            document.getElementById('signinBtn').disabled = false;
+            document.getElementById('signinBtn').textContent = 'ACCESS SYSTEM';
+        }
+
+        async function handleSignUp(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const accessCode = document.getElementById('accessCode').value.trim();
+
+            if (!name || !email || !password || !confirmPassword || !accessCode) {
+                showAuthStatus('Please fill in all required fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAuthStatus('Passphrases do not match', 'error');
+                return;
+            }
+
+            if (password.length < 8) {
+                showAuthStatus('Passphrase must be at least 8 characters', 'error');
+                return;
+            }
+
+            if (accessCode !== 'SHADOW2024') {
+                showAuthStatus('Invalid admin access code', 'error');
+                return;
+            }
+
+            // Simulate account creation
+            document.getElementById('signupBtn').disabled = true;
+            document.getElementById('signupBtn').textContent = 'CREATING ACCOUNT...';
+
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            currentUser = {
+                email: email,
+                name: name,
+                role: 'admin',
+                loginTime: new Date().toISOString()
+            };
+            
+            isAuthenticated = true;
+            
+            showAuthStatus('Admin account created successfully! Logging you in...', 'success');
+            logToConsole(`New admin account created: ${email}`);
+            
+            setTimeout(() => {
+                hideAdminPanel();
+                logToConsole('ShadowGuard Scanner initialized successfully');
+                logToConsole('System ready for threat detection');
+            }, 2000);
+
+            document.getElementById('signupBtn').disabled = false;
+            document.getElementById('signupBtn').textContent = 'CREATE ADMIN ACCOUNT';
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            isAuthenticated = false;
+            localStorage.removeItem('shadowguard_session');
+            
+            // Clear all forms
+            document.getElementById('signinEmail').value = '';
+            document.getElementById('signinPassword').value = '';
+            document.getElementById('rememberMe').checked = false;
+            document.getElementById('signupName').value = '';
+            document.getElementById('signupEmail').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('accessCode').value = '';
+            
+            clearAll();
+            showAdminPanel();
+            switchTab('signin');
+            
+            logToConsole('User logged out successfully');
+        }
+
+        function checkStoredSession() {
+            const stored = localStorage.getItem('shadowguard_session');
+            if (stored) {
+                try {
+                    currentUser = JSON.parse(stored);
+                    isAuthenticated = true;
+                    hideAdminPanel();
+                    logToConsole(`Welcome back, ${currentUser.name}`);
+                    logToConsole('ShadowGuard Scanner initialized successfully');
+                    logToConsole('System ready for threat detection');
+                    return true;
+                } catch (e) {
+                    localStorage.removeItem('shadowguard_session');
+                }
+            }
+            return false;
+        }
+
+        // Admin Event Listeners
+        document.getElementById('signinTab').addEventListener('click', () => switchTab('signin'));
+        document.getElementById('signupTab').addEventListener('click', () => switchTab('signup'));
+        document.getElementById('signinBtn').addEventListener('click', handleSignIn);
+        document.getElementById('signupBtn').addEventListener('click', handleSignUp);
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+        // Form submission handlers
+        document.getElementById('signinForm').addEventListener('submit', handleSignIn);
+        document.getElementById('signupForm').addEventListener('submit', handleSignUp);
+
+        // Initialize
+        initMatrixBackground();
+        
+        // Check for stored session
+        if (!checkStoredSession()) {
+            showAdminPanel();
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98929e1af5aa17a7',t:'MTc1OTU1OTI5MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
