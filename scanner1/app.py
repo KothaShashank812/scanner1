@@ -1,11 +1,15 @@
 import streamlit as st
 
-# Set page title and layout
+# Page setup
 st.set_page_config(page_title="ShadowGuard Scanner", layout="wide")
 
-# Read your HTML file
-with open("scanner.html", "r", encoding="utf-8") as file:
-    html_code = file.read()
+st.title("🛡️ ShadowGuard Scanner")
 
-# Display HTML inside an iframe
-st.components.v1.html(html_code, height=900, scrolling=True)
+# Read and display your HTML
+with open("scanner1/scanner.html", "r", encoding="utf-8") as f:
+    html_content = f.read()
+
+# Render the HTML
+st.components.v1.html(html_content, height=900, scrolling=True)
+
+
